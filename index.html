@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Accueil</title>
+</head>
+<body>
+<h1>Accueil</h1>
+<h3>{{message}}</h3>
+	<form method="POST" action="/">
+		<input type="text" value="{{user}}" name="user">
+		<input type="password" value="{{pass}}" name="pass">
+		<input type="submit" name="validate">
+	</form>
+	Test 1 : {% echo "allo toi"; %}<br/>
+	Test 2 : {% foreach([1,2,3,4,5] as $v){echo $v;} %}<br/>
+</body>
+</html>

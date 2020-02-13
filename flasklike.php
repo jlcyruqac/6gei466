@@ -24,7 +24,28 @@ function fl_run() {
 	$route = $_SERVER['REQUEST_URI'];
 	// use global route definitions
 	global $route_defs;
-	// call the proper route
+
+	// call the proper route - pregmatch
+	foreach ($route_defs as $key => $value) {
+		$safe_key = $key."$";
+		$safe_key = str_replace("*", "(.*)", $safe_key);
+		//error_log("Looking for : ".$safe_key." In : ".$route);
+		if (preg_match("#".$safe_key."#", $route, $out)) {
+			if (array_key_exists($method, $route_defs[$key])) {
+				call_user_func_array($route_defs[$key][$method], $_SERVER);
+			} else {
+				// Return : Method not implemented - 
+				header($_SERVER["SERVER_PROTOCOL"]." 501 Method not implemented", true, 501);
+				echo "501 - Method not implemented";
+			}
+		}
+	}
+
+	header($_SERVER["SERVER_PROTOCOL"]." 404 Not Found", true, 404);
+	echo "404 - File not found";
+	die();
+
+	// call the proper route - absolute match
 	if (array_key_exists($route, $route_defs)) {
 		if (array_key_exists($method, $route_defs[$route])) {
 			call_user_func_array($route_defs[$route][$method], $_SERVER);
@@ -47,6 +68,59 @@ function fl_run() {
 function fl_redirect($url) {
 	header('Location: ' . $url, true, 302);
 	die();
+}
+
+////////////////////////////////////////////////////////////////
+// Lazy mime-type detection
+// Args : filename (complete path) 
+// Return : text string containing mime-type
+function lazy_mime_type($filename) {
+
+	if (preg_match("#\.css$#", $filename)) {
+		return "text/css";
+	} elseif (preg_match("#\.(jpg|jpeg)$#", $filename)) {
+		return "image/jpeg";
+	}  elseif (preg_match("#\.js$#", $filename)) {
+		return "text/javascript";
+	}  elseif (preg_match("#\.png$#", $filename)) {
+		return "image/png";
+	}  elseif (preg_match("#\.pdf$#", $filename)) {
+		return "application/pdf";
+	}  elseif (preg_match("#\.txt$#", $filename)) {
+		return "text/plain";
+	}  elseif (preg_match("#\.js$#", $filename)) {
+		return "text/javascript";
+	}  elseif (preg_match("#\.otf$#", $filename)) {
+		return "font/otf";
+	}  elseif (preg_match("#\.(htm|html)$#", $filename)) {
+		return "text/html";
+	}
+	return "application/octet-stream";
+}
+
+////////////////////////////////////////////////////////////////
+// Redirect user to a new page
+// Args : New url
+function fl_static($url) {
+    $file_location = $_SERVER["DOCUMENT_ROOT"] . $url;
+    $file_location = str_replace("/", "\\", $file_location);
+    if (file_exists($file_location)) {
+        header($_SERVER["SERVER_PROTOCOL"] . " 200 OK");
+        header("Cache-Control: public"); // needed for internet explorer
+        // For this to work uncomment module extension=fileinfo in php.ini
+        // If php is installed with scoop it's in user/scoop/persist/php/cli
+        // header("Content-Type: ".mime_content_type($file_location));
+        header("Content-Type: ".lazy_mime_type($file_location));
+        header("Content-Length:".filesize($file_location));
+        //header("Content-Disposition: attachment; filename=images.jpg");
+		error_log("Returning : ".$file_location." (".filesize($file_location).")");
+        readfile($file_location);
+        flush();
+        die();
+    } else {
+		header($_SERVER["SERVER_PROTOCOL"]." 404 Not Found", true, 404);
+		echo "404 - File not found : ".$file_location;    	
+    }
 }
 
 ////////////////////////////////////////////////////////////////
